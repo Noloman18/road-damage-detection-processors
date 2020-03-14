@@ -6,9 +6,11 @@ import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 import za.co.wits.students.road.damage.model.coco.*;
 
+import javax.imageio.ImageIO;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.parsers.ParserConfigurationException;
+import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
 import java.nio.file.Files;
@@ -67,8 +69,8 @@ public class CocoUtility {
             var annotation = Annotation.builder()
                     .boundingBox(boundingBox.getXmin())
                     .boundingBox(boundingBox.getYmin())
-                    .boundingBox(width)
-                    .boundingBox(height)
+                    .boundingBox(boundingBox.getXmax()-1)
+                    .boundingBox(boundingBox.getYmax()-1)
                     .area(width*height)
                     .imageId(image.getId())
                     .categoryId(category.getId())
@@ -104,6 +106,9 @@ public class CocoUtility {
                 var imageName = baseDirectory.resolve(pascalAnnotation.getFolder()).resolve(pascalAnnotation.getFilename());
 
                 if (Files.exists(imageName)) {
+                    var image = ImageIO.read(new File(imageName.toAbsolutePath().toString()));
+                    pascalAnnotation.getSize().setWidth(image.getWidth());
+                    pascalAnnotation.getSize().setHeight(image.getHeight());
                     synchronized (annotations) {
                         annotations.add(pascalAnnotation);
                     }

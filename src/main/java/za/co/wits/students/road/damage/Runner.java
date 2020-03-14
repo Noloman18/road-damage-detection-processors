@@ -88,8 +88,8 @@ public class Runner {
         var x1 = boundingBox.get(0);
         var y1 = boundingBox.get(1);
 
-        var x2 = x1 + boundingBox.get(2);
-        var y2 = y1 + boundingBox.get(3);
+        var x2 = boundingBox.get(2);
+        var y2 = boundingBox.get(3);
 
 
         var cyan = Color.CYAN.getRGB();
@@ -128,5 +128,6 @@ public class Runner {
     public static void main(String[] args) throws Exception {
         var me = new Runner();
         me.displayImage();
+        //me.createCoco();
     }
 }
