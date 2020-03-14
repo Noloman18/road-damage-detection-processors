@@ -32,6 +32,19 @@ public class CocoUtility {
         var cocoAnnotationsList = new ArrayList<Annotation>(pascalAnnotationList.size());
 
         for (var pascalAnnotation : pascalAnnotationList) {
+            if (pascalAnnotation.getObject() == null)
+                continue;//skip, no road damage...
+
+            var boundingBox = pascalAnnotation.getObject().getBndbox();
+            var width = boundingBox.getXmax()-boundingBox.getXmin() -1;
+            var height = boundingBox.getYmax()-boundingBox.getYmin() -1;
+
+            var totalWidth = width+boundingBox.getXmin();
+            var totalHeight = height+boundingBox.getYmin();
+
+            if (width<1 || height<1 || totalWidth>pascalAnnotation.getSize().getWidth() || totalHeight> pascalAnnotation.getSize().getHeight())
+                continue;
+
             var image =
                     Image.builder(
                             pascalAnnotation.getFilename(),
@@ -41,11 +54,6 @@ public class CocoUtility {
                             .build();
 
             imagesList.add(image);
-
-            if (pascalAnnotation.getObject() == null)
-                continue;//skip, no road damage...
-
-            var boundingBox = pascalAnnotation.getObject().getBndbox();
 
             var optionalCategory = categoryList.stream().filter(ithCat -> Objects.equals(pascalAnnotation.getObject().getName(), ithCat.getName())).findFirst();
             var category = (Category) null;
@@ -59,8 +67,9 @@ public class CocoUtility {
             var annotation = Annotation.builder()
                     .boundingBox(boundingBox.getXmin())
                     .boundingBox(boundingBox.getYmin())
-                    .boundingBox(boundingBox.getXmax()-boundingBox.getXmin())
-                    .boundingBox(boundingBox.getYmax()-boundingBox.getYmin())
+                    .boundingBox(width)
+                    .boundingBox(height)
+                    .area(width*height)
                     .imageId(image.getId())
                     .categoryId(category.getId())
                     .isCrowd(0)
@@ -124,5 +133,4 @@ public class CocoUtility {
                 .url("https://github.com/sekilab/RoadDamageDetector/blob/master/LICENSE")
                 .build();
     }
-
 }

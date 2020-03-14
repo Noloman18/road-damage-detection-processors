@@ -18,6 +18,7 @@ public class Annotation {
     private Integer imageId;
     @SerializedName("category_id")
     private Integer categoryId;
+    private Integer area;
     @Singular("boundingBox")
     @SerializedName("bbox")
     private List<Integer> boundingBox;
