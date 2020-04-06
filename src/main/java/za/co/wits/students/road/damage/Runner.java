@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import lombok.extern.java.Log;
 import org.xml.sax.SAXException;
+import za.co.wits.students.road.damage.model.coco.Annotation;
 import za.co.wits.students.road.damage.model.coco.CocoFormat;
 
 import javax.imageio.ImageIO;
@@ -19,6 +20,7 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Random;
+import java.util.function.Predicate;
 
 @Log
 public class Runner {
@@ -30,6 +32,17 @@ public class Runner {
                 .description("Road Maintenance and Repair Guidebook 2013 JRA (2013) in Japan")
                 .contributor("Hiroya Maeda\u0003, Yoshihide Sekimoto, Toshikazu Seto, Takehiro Kashiyama, Hiroshi Omata University of Tokyo, 4-6-1 Komaba, Tokyo, Japan")
                 .github("https://github.com/sekilab/RoadDamageDetector/blob/master/LICENSE")
+                .offset(1)
+                .build();
+    }
+
+    private final CocoUtility kanagarooProcessor() {
+        return CocoUtility.builder()
+                .annotationDirectory("D:\\university\\datasets\\Kangaroo\\kangaroo\\annots")
+                .imagesDirectory("D:\\university\\datasets\\Kangaroo\\kangaroo\\images")
+                .description("Kangaroo dataset")
+                .contributor("Huynh Ngoc Anh")
+                .github("https://github.com/experiencor/kangaroo")
                 .offset(1)
                 .build();
     }
@@ -47,7 +60,7 @@ public class Runner {
         log.info("I am done!");
     }
 
-    public void browseDataset(String imageBaseFolder, String cocoFileName) throws Exception {
+    public void browseDataset(String imageBaseFolder, String cocoFileName, Predicate<Annotation> filter) throws Exception {
         var inputPath = Paths.get(cocoFileName);
         var cocoFormat =
                 new Gson().fromJson(Files.readString(inputPath), CocoFormat.class);
@@ -67,13 +80,13 @@ public class Runner {
             }
         };
 
-        canvas.setImg(getImage(imageBaseFolder, cocoFormat));
+        canvas.setImg(getImage(imageBaseFolder, cocoFormat, filter));
 
         var button = new JButton();
         button.setText("Next image");
         button.setSize(600, 30);
         button.addActionListener(event -> {
-            canvas.setImg(getImage(imageBaseFolder, cocoFormat));
+            canvas.setImg(getImage(imageBaseFolder, cocoFormat, filter));
             canvas.repaint();
             button.repaint();
         });
@@ -87,9 +100,9 @@ public class Runner {
         frame.add(button, BorderLayout.SOUTH);
     }
 
-    private BufferedImage getImage(String imageBase, CocoFormat cocoFormat) {
+    private BufferedImage getImage(String imageBase, CocoFormat cocoFormat, Predicate<Annotation> filter) {
         Collections.shuffle(cocoFormat.getAnnotations());
-        var annotation = cocoFormat.getAnnotations().get(0);
+        var annotation = cocoFormat.getAnnotations().stream().filter(filter).findFirst().get();
         var imageId = annotation.getImageId();
 
         var imgMetaData =
@@ -139,7 +152,14 @@ public class Runner {
     public static void main(String[] args) throws Exception {
         var me = new Runner();
         //me.createCoco(me.roadDamageDatasetConverter(), "D:\\Masters\\2020\\maeda300\\roadDamage.json");
-        me.browseDataset("D:\\Masters\\2020\\maeda300\\images","D:\\Masters\\2020\\maeda300\\roadDamage.json");
-        //me.createCoco();
+//        me.browseDataset(
+//                "D:\\Masters\\2020\\maeda300\\images",
+//                "D:\\Masters\\2020\\maeda300\\roadDamage.json",
+//                Annotation::containsCrowd);
+        //me.createCoco(me.kanagarooProcessor(), "D:\\university\\datasets\\Kangaroo\\kangaroo\\kangaroo.json");
+//        me.browseDataset(
+//                "D:\\university\\datasets\\Kangaroo\\kangaroo\\images",
+//                "D:\\\\university\\\\datasets\\\\Kangaroo\\\\kangaroo\\\\kangaroo.json",
+//                Annotation::containsCrowd);
     }
 }

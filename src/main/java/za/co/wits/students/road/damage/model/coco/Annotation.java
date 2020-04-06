@@ -26,4 +26,8 @@ public class Annotation {
     private List<List<Integer>> boundingBox;
     @Builder.Default
     private final Integer id = instanceCounter.incrementAndGet();
+
+    public Boolean containsCrowd() {
+        return isCrowd.stream().anyMatch(item -> item.equals(1));
+    }
 }
