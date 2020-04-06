@@ -15,7 +15,7 @@ public class Category {
     @Builder.Default
     private final String superCategory = "Road Damage";
     @Builder.Default
-    private final Integer id = instanceCounter.getAndIncrement();
+    private final Integer id = instanceCounter.incrementAndGet();
     private String name;
 
     public static CategoryBuilder builder(String name) {

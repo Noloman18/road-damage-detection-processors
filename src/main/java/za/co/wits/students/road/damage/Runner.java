@@ -16,32 +16,44 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Random;
 
 @Log
 public class Runner {
 
-    public void createCoco() throws ParserConfigurationException, JAXBException, SAXException, IOException {
-        var cocoUtility = CocoUtility.builder().build();
+    private final CocoUtility roadDamageDatasetConverter() {
+        return CocoUtility.builder()
+                .annotationDirectory("D:\\Masters\\2020\\maeda300\\annotations\\xmls")
+                .imagesDirectory("D:\\Masters\\2020\\maeda300\\images")
+                .description("Road Maintenance and Repair Guidebook 2013 JRA (2013) in Japan")
+                .contributor("Hiroya Maeda\u0003, Yoshihide Sekimoto, Toshikazu Seto, Takehiro Kashiyama, Hiroshi Omata University of Tokyo, 4-6-1 Komaba, Tokyo, Japan")
+                .github("https://github.com/sekilab/RoadDamageDetector/blob/master/LICENSE")
+                .offset(1)
+                .build();
+    }
+
+
+    public void createCoco(CocoUtility cocoUtility, String outputFilename) throws ParserConfigurationException, JAXBException, SAXException, IOException {
         CocoFormat cocoFormat = cocoUtility.convertCocoXmlAnnotationFilesToCocoJson();
         GsonBuilder builder = new GsonBuilder();
         builder.setPrettyPrinting();
         String cocoJson = builder.create().toJson(cocoFormat);
 
-        var outputPath = Paths.get("D:\\Masters\\2020\\maeda300\\roadDamage.json");
+        var outputPath = Paths.get(outputFilename);
         Files.write(outputPath, cocoJson.getBytes());
         log.info(cocoJson);
         log.info("I am done!");
     }
 
-    public void displayImage() throws Exception {
-        var inputPath = Paths.get("D:\\Masters\\2020\\maeda300\\roadDamage.json");
+    public void browseDataset(String imageBaseFolder, String cocoFileName) throws Exception {
+        var inputPath = Paths.get(cocoFileName);
         var cocoFormat =
                 new Gson().fromJson(Files.readString(inputPath), CocoFormat.class);
 
         var canvas = new JPanel() {
-            BufferedImage img = (BufferedImage) null;
+            BufferedImage img = null;
 
             void setImg(BufferedImage img) {
                 this.img = img;
@@ -55,13 +67,13 @@ public class Runner {
             }
         };
 
-        canvas.setImg(getImage(cocoFormat));
+        canvas.setImg(getImage(imageBaseFolder, cocoFormat));
 
         var button = new JButton();
         button.setText("Next image");
         button.setSize(600, 30);
         button.addActionListener(event -> {
-            canvas.setImg(getImage(cocoFormat));
+            canvas.setImg(getImage(imageBaseFolder, cocoFormat));
             canvas.repaint();
             button.repaint();
         });
@@ -75,7 +87,7 @@ public class Runner {
         frame.add(button, BorderLayout.SOUTH);
     }
 
-    private BufferedImage getImage(CocoFormat cocoFormat) {
+    private BufferedImage getImage(String imageBase, CocoFormat cocoFormat) {
         Collections.shuffle(cocoFormat.getAnnotations());
         var annotation = cocoFormat.getAnnotations().get(0);
         var imageId = annotation.getImageId();
@@ -83,42 +95,41 @@ public class Runner {
         var imgMetaData =
                 cocoFormat.getImages().stream().filter(img -> img.getId().equals(imageId)).findFirst().get();
 
-        var boundingBox = annotation.getBoundingBox();
-
-        var x1 = boundingBox.get(0);
-        var y1 = boundingBox.get(1);
-
-        var x2 = boundingBox.get(2);
-        var y2 = boundingBox.get(3);
-
-
-        var cyan = Color.CYAN.getRGB();
-
         var image = (BufferedImage) null;
-        int imageWidth = 0;
-        int imageHeight = 0;
+        var randomUtil = new Random();
+        var colors = Arrays.asList(
+                Color.CYAN, Color.YELLOW, Color.RED, Color.MAGENTA, Color.ORANGE, Color.BLUE
+        );
 
-        int x = 0;
-        int y = 0;
+        int imageWidth = 0, imageHeight = 0, x1 = 0, x2 = 0, y1 = 0, y2 = 0, x = 0, y = 0;
 
         try {
-            image = ImageIO.read(new File(String.format("D:/Masters/2020/maeda300/images/%s", imgMetaData.getFileName())));
+            image = ImageIO.read(new File(String.format("%s/%s", imageBase, imgMetaData.getFileName())));
 
-            imageWidth = image.getWidth();
-            imageHeight = image.getHeight();
+            for (var boundingBox : annotation.getBoundingBox()) {
+                x1 = boundingBox.get(0);
+                y1 = boundingBox.get(1);
 
-            for (x = x1; x <= x2; x++) {
-                image.setRGB(x, y1, cyan);
-                image.setRGB(x, y2, cyan);
+                x2 = boundingBox.get(2);
+                y2 = boundingBox.get(3);
+
+                var color = colors.get(randomUtil.nextInt(colors.size())).getRGB();
+
+                x = 0;
+                y = 0;
+
+                for (x = x1; x <= x2; x++) {
+                    image.setRGB(x, y1, color);
+                    image.setRGB(x, y2, color);
+                }
+
+                for (y = y1; y <= y2; y++) {
+                    image.setRGB(x1, y, color);
+                    image.setRGB(x2, y, color);
+                }
             }
-
-            for (y=y1;y<=y2;y++) {
-                image.setRGB(x1, y, cyan);
-                image.setRGB(x2, y, cyan);
-            }
-
         } catch (Exception e) {
-            System.out.printf("%d %d %d %d IMG[%d,%d] Guilty[%d,%d]%n",x1,x2,y1,y2,imageWidth,imageHeight,x,y);
+            System.out.printf("%d %d %d %d IMG[%d,%d] Guilty[%d,%d]%n", x1, x2, y1, y2, imageWidth, imageHeight, x, y);
             e.printStackTrace();
         }
 
@@ -127,7 +138,8 @@ public class Runner {
 
     public static void main(String[] args) throws Exception {
         var me = new Runner();
-        me.displayImage();
+        //me.createCoco(me.roadDamageDatasetConverter(), "D:\\Masters\\2020\\maeda300\\roadDamage.json");
+        me.browseDataset("D:\\Masters\\2020\\maeda300\\images","D:\\Masters\\2020\\maeda300\\roadDamage.json");
         //me.createCoco();
     }
 }

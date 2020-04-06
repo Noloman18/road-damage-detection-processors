@@ -13,15 +13,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Annotation {
     private static final AtomicInteger instanceCounter = new AtomicInteger();
     @SerializedName("is_crowd")
-    private Integer isCrowd;
+    private List<Integer> isCrowd;
     @SerializedName("image_id")
     private Integer imageId;
+    @Singular("categoryId")
     @SerializedName("category_id")
-    private Integer categoryId;
-    private Integer area;
+    private List<Integer> categoryId;
+    @Singular("area")
+    private List<Integer> area;
     @Singular("boundingBox")
     @SerializedName("bbox")
-    private List<Integer> boundingBox;
+    private List<List<Integer>> boundingBox;
     @Builder.Default
     private final Integer id = instanceCounter.incrementAndGet();
 }

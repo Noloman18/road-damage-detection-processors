@@ -3,6 +3,7 @@ package za.co.wits.students.road.damage.model.coco;
 import lombok.Data;
 
 import javax.xml.bind.annotation.XmlRootElement;
+import java.util.List;
 
 @Data
 @XmlRootElement(name = "annotation")
@@ -11,7 +12,7 @@ public class PascalAnnotation {
     private String folder;
     private String filename;
     private Size size;
-    private MetaData object;
+    private List<MetaData> object;
     @Data
     public static class Size {
         private Integer width;
