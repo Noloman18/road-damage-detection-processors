@@ -3,14 +3,11 @@ package za.co.wits.students.road.damage;
 import lombok.Builder;
 import lombok.extern.java.Log;
 import org.xml.sax.InputSource;
-import org.xml.sax.SAXException;
 import za.co.wits.students.road.damage.model.coco.Image;
 import za.co.wits.students.road.damage.model.coco.*;
 
 import javax.imageio.ImageIO;
 import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.parsers.ParserConfigurationException;
 import java.awt.*;
 import java.io.File;
 import java.io.IOException;
@@ -34,11 +31,13 @@ public class CocoUtility {
     private String github;
     private Integer offset;
 
-    public CocoFormat convertCocoXmlAnnotationFilesToCocoJson() throws IOException, ParserConfigurationException, SAXException, JAXBException {
-        var xmlAnnotationBaseFolder = Paths.get(annotationDirectory);
-        var annotationPaths = Files.list(xmlAnnotationBaseFolder).collect(Collectors.toList());
-        var pascalAnnotationList = getAnnotations(annotationPaths);
+    public CocoFormat convertPascalFormatToCocoFormat(PascalType pascalType) throws IOException {
+        var annotationBaseFolder = Paths.get(annotationDirectory);
+        var annotationPaths = Files.list(annotationBaseFolder).collect(Collectors.toList());
+        return convertToCocoFormat(pascalType==PascalType.PASCAL?getPascalAnnotations(annotationPaths):getPascalVocAnnotations(annotationPaths));
+    }
 
+    private CocoFormat convertToCocoFormat(List<PascalAnnotation> pascalAnnotationList) {
         var licenceList = getLicence();
         var info = getInformation();
         var categoryList = new ArrayList<Category>(10);
@@ -139,7 +138,7 @@ public class CocoUtility {
         return cocoFormat;
     }
 
-    private List<PascalAnnotation> getAnnotations(List<Path> annotationPaths) {
+    private List<PascalAnnotation> getPascalVocAnnotations(List<Path> annotationPaths) {
         List<PascalAnnotation> annotations = new ArrayList<>();
 
         annotationPaths.parallelStream().forEach(path -> {
@@ -151,26 +150,76 @@ public class CocoUtility {
                 var unmarshaller = jaxbContext.createUnmarshaller();
                 var pascalAnnotation = (PascalAnnotation) unmarshaller.unmarshal(new InputSource(new StringReader(xmlString)));
 
-                var baseDirectory = Paths.get(imagesDirectory);
-
-                var imageName = baseDirectory.resolve(pascalAnnotation.getFilename());
-
-                if (Files.exists(imageName)) {
-                    var image = ImageIO.read(new File(imageName.toAbsolutePath().toString()));
-                    pascalAnnotation.getSize().setWidth(image.getWidth());
-                    pascalAnnotation.getSize().setHeight(image.getHeight());
-                    synchronized (annotations) {
-                        annotations.add(pascalAnnotation);
-                    }
-                }
-
-                log.info(String.format("Processed [%s] %n", path));
+                validateImageExists(annotations, path, pascalAnnotation);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         });
 
         return annotations;
+    }
+
+    private List<PascalAnnotation> getPascalAnnotations(List<Path> annotationPaths) {
+        List<PascalAnnotation> annotations = new ArrayList<>();
+
+        annotationPaths.parallelStream().forEach(path -> {
+            var pascalAnnotation = new PascalAnnotation();
+            pascalAnnotation.setObject(new ArrayList<>());
+
+            try {
+                try (var reader = Files.newBufferedReader(path)) {
+                    String line;
+
+                    while ((line = reader.readLine()) != null) {
+                        if (line.startsWith("#"))
+                            continue;
+
+                        if (line.startsWith("Image filename"))
+                            pascalAnnotation.setFilename(line.substring(line.lastIndexOf('/') + 1, line.length() - 1));
+                        else if (line.startsWith("Image size")) {
+                            var dimensions = line.split(":")[1].split("x");
+                            var size = new PascalAnnotation.Size();
+                            size.setWidth(Integer.valueOf(dimensions[0].trim()));
+                            size.setHeight(Integer.valueOf(dimensions[1].trim()));
+                            pascalAnnotation.setSize(size);
+                        } else if (line.startsWith("Bounding box for object")) {
+                            var coordinates = line.split(":")[1].replaceAll("[ ()]", "").replace("-", ",").split(",");
+                            var object = new PascalAnnotation.MetaData();
+                            object.setName(line.split("\\\"")[1]);
+                            object.setBndbox(new PascalAnnotation.BoundingBox());
+                            object.getBndbox().setXmin(Integer.valueOf(coordinates[0]));
+                            object.getBndbox().setYmin(Integer.valueOf(coordinates[1]));
+                            object.getBndbox().setXmax(Integer.valueOf(coordinates[2]));
+                            object.getBndbox().setYmax(Integer.valueOf(coordinates[3]));
+                            pascalAnnotation.getObject().add(object);
+                        }
+                    }
+                }
+
+                validateImageExists(annotations, path, pascalAnnotation);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        return annotations;
+    }
+
+    private void validateImageExists(List<PascalAnnotation> annotations, Path path, PascalAnnotation pascalAnnotation) throws IOException {
+        var baseDirectory = Paths.get(imagesDirectory);
+
+        var imageName = baseDirectory.resolve(pascalAnnotation.getFilename());
+
+        if (Files.exists(imageName)) {
+            var image = ImageIO.read(new File(imageName.toAbsolutePath().toString()));
+            pascalAnnotation.getSize().setWidth(image.getWidth());
+            pascalAnnotation.getSize().setHeight(image.getHeight());
+            synchronized (annotations) {
+                annotations.add(pascalAnnotation);
+            }
+        }
+
+        log.info(String.format("Processed [%s] %n", path));
     }
 
     private Info getInformation() {
@@ -187,5 +236,9 @@ public class CocoUtility {
                 .name("MIT Licence")
                 .url(github)
                 .build();
+    }
+
+    public static enum PascalType {
+        PASCAL_VOC, PASCAL
     }
 }

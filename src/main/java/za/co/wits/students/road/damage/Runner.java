@@ -36,7 +36,7 @@ public class Runner {
                 .build();
     }
 
-    private final CocoUtility kanagarooProcessor() {
+    private final CocoUtility kanagarooConverter() {
         return CocoUtility.builder()
                 .annotationDirectory("D:\\university\\datasets\\Kangaroo\\kangaroo\\annots")
                 .imagesDirectory("D:\\university\\datasets\\Kangaroo\\kangaroo\\images")
@@ -47,9 +47,20 @@ public class Runner {
                 .build();
     }
 
+    private final CocoUtility personConverter() {
+        return CocoUtility.builder()
+                .annotationDirectory("D:\\university\\datasets\\PennFudanPed\\Annotation")
+                .imagesDirectory("D:\\university\\datasets\\PennFudanPed\\PNGImages")
+                .description("Penn Fudan Ped")
+                .contributor("Pytorch tutorial")
+                .github("https://github.com/experiencor/kangaroo")
+                .offset(1)
+                .build();
+    }
 
-    public void createCoco(CocoUtility cocoUtility, String outputFilename) throws ParserConfigurationException, JAXBException, SAXException, IOException {
-        CocoFormat cocoFormat = cocoUtility.convertCocoXmlAnnotationFilesToCocoJson();
+
+    public void createCoco(CocoUtility cocoUtility, CocoUtility.PascalType pascalType, String outputFilename) throws ParserConfigurationException, JAXBException, SAXException, IOException {
+        CocoFormat cocoFormat = cocoUtility.convertPascalFormatToCocoFormat(pascalType);
         GsonBuilder builder = new GsonBuilder();
         builder.setPrettyPrinting();
         String cocoJson = builder.create().toJson(cocoFormat);
@@ -151,15 +162,23 @@ public class Runner {
 
     public static void main(String[] args) throws Exception {
         var me = new Runner();
-        //me.createCoco(me.roadDamageDatasetConverter(), "D:\\Masters\\2020\\maeda300\\roadDamage.json");
+//        me.createCoco(me.roadDamageDatasetConverter(), CocoUtility.PascalType.PASCAL_VOC, "D:\\Masters\\2020\\maeda300\\roadDamage.json");
 //        me.browseDataset(
 //                "D:\\Masters\\2020\\maeda300\\images",
 //                "D:\\Masters\\2020\\maeda300\\roadDamage.json",
 //                Annotation::containsCrowd);
-        //me.createCoco(me.kanagarooProcessor(), "D:\\university\\datasets\\Kangaroo\\kangaroo\\kangaroo.json");
+//        me.createCoco(me.kanagarooConverter(), CocoUtility.PascalType.PASCAL_VOC, "D:\\university\\datasets\\Kangaroo\\kangaroo\\kangaroo.json");
 //        me.browseDataset(
 //                "D:\\university\\datasets\\Kangaroo\\kangaroo\\images",
 //                "D:\\\\university\\\\datasets\\\\Kangaroo\\\\kangaroo\\\\kangaroo.json",
 //                Annotation::containsCrowd);
+//        me.createCoco(
+//                me.personConverter(),
+//                CocoUtility.PascalType.PASCAL,
+//                "D:\\university\\datasets\\PennFudanPed\\pennFudanPed.json");
+        me.browseDataset(
+                "D:\\university\\datasets\\PennFudanPed\\PNGImages",
+                "D:\\\\university\\\\datasets\\\\PennFudanPed\\\\pennFudanPed.json",
+                x->true);
     }
 }
